@@ -30,20 +30,21 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 Record your plan here before editing code.
 
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: Keep pages focused on rendering and user interaction; use the shared API client with relative `/api` paths and the Vite proxy. Each capability page handles loading, empty, and error states accessibly, while the service owns HTTP and persistence behavior.
+- Logic tier decision: Keep routes thin and delegate validation and data operations to the service layer. Return the response shapes in the API contract, map invalid input and missing resources to deliberate 4xx responses, and never let malformed IDs surface as cast-error 500 responses. Do not add authentication.
+- Data tier decision: Make Mongoose schemas enforce required fields and sensible defaults, including an empty `members` array for teams. Keep seeded examples representative and make seeding repeatable without deleting or rewriting unrelated records.
+- Activity tracking approach: Validate the request shape, positive finite minutes, and well-formed IDs for an existing user and team before writing. Store the submitted references and activity type, calculate points from minutes at one point per minute, and set `occurredAt` when the activity is created. List activities with their stored references and computed fields.
+- Team management approach: Require a non-empty name and mascot; default omitted members to an empty array. Validate member IDs before creating a team, persist submitted name and mascot, and return member IDs consistently from create and list endpoints.
+- Leaderboard approach: Sum persisted activity points per team, sort by total descending, and assign ranks starting at 1. Return each row as `teamName`, `totalPoints`, and `rank`.
+- Workout suggestions approach: Find the user by email or return 404. Prefer workouts matching the user's fitness goal, using the most recent activity type as a fallback when needed; return a concise reason tied to the goal or activity and put the best match first.
 
 ## Test plan
 
 Record the commands you run and what each failure means.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- Data-tier command: `npm run test:data --prefix octofit-tracker/backend` — verifies required model fields, defaults, references, and repeatable non-destructive seeding. Failures indicate a schema or seed-data contract regression.
+- API command: `npm run test:api --prefix octofit-tracker/backend` — verifies create/list response shapes, invalid and missing reference handling, leaderboard totals/ranks, and personalized suggestions. Failures indicate incorrect route/service behavior, persistence, or status codes.
+- Frontend command: `npm test --prefix octofit-tracker/frontend` — verifies API-driven content, the requested user for suggestions, and accessible loading, empty, and error states on each capability page. Failures indicate a presentation or API-client integration regression.
+- Backend build command: `npm run build --prefix octofit-tracker/backend` — type-checks the backend; failures indicate TypeScript errors in models, services, routes, or server wiring.
+- Frontend build command: `npm run build --prefix octofit-tracker/frontend` — type-checks and bundles the frontend; failures indicate TypeScript or production-build errors.
+- Run the data tests first, then the API tests, then frontend tests; finish with both builds. At the current baseline, the data suite has 4 failing tests (model validation), the API suite has 4 failing tests (unimplemented validation, leaderboard, and suggestion reasoning), and the frontend suite has 15 failing tests (incomplete rendering and async states). Re-run all five commands after implementation and record the results here.
